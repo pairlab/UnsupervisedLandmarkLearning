@@ -22,7 +22,7 @@ def conv_ReLU(in_channels, out_channels, kernel_size, stride=1, padding=0,
                              nn.ReLU(inplace=True))
 
 
-def estimate_gaussian_params(in_heatmaps, grid_x, grid_y, return_covar=False, skip_norm=True, activation=torch.exp, use_fixed_covar=False, fixed_covar=0.1):
+def estimate_gaussian_params(in_heatmaps, grid_x, grid_y, return_covar=False, skip_norm=False, activation=torch.exp, use_fixed_covar=False, fixed_covar=0.1):
     """Converts heatmaps to 2D Gaussians by estimating mean and covariance
 
     Args:
@@ -32,6 +32,9 @@ def estimate_gaussian_params(in_heatmaps, grid_x, grid_y, return_covar=False, sk
         activation: activation function for logits. Defaults to torch.exp, which gives us a softmax
         use_fixed_covar (bool): if true, return hard coded scaled identity matrix, otherwise estimate it from the heatmap
     """
+    # from pdb import set_trace
+    # set_trace()
+    
     b, c, h, w = in_heatmaps.shape
     heatmaps_reshaped = in_heatmaps.view(b, c, -1)
     # should be b x c x HW

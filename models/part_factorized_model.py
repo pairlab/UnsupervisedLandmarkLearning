@@ -13,7 +13,6 @@ from .submodules import estimate_gaussian_params, gaussian_params_to_heatmap
 from .generator import SPADEGenerator
 from .unet import Unet
 
-
 class PartFactorizedModel(nn.Module):
     def __init__(self, args):
         super(PartFactorizedModel, self).__init__()
@@ -147,6 +146,7 @@ class PartFactorizedModel(nn.Module):
         warped_input_shape_enc, shape_encoder_first_layer_feats = self.shape_encoder(warped_input, True)
         warped_input_shape_enc = warped_input_shape_enc[:, 0:self.n_landmarks, :, :]
         w_part_maps, w_gauss_params = self.encoding2part_maps(warped_input_shape_enc, True)
+        
         cj_gauss_maps = gaussian_params_to_heatmap(self.grid_x_2x, self.grid_y_2x, cj_gauss_params[0],
                                                    cj_gauss_params[1], cj_gauss_params[2], self.img_size, self.img_size)
 
@@ -163,11 +163,11 @@ class PartFactorizedModel(nn.Module):
 
         #  project apearance information onto the heatmap of the color-jittered image
         #  output should be B x C x H x W
+
         projected_part_map = self.project_appearance_onto_part_map(appearance_vectors, cj_gauss_maps)
+
         decoded_image = self.image_decoder(cj_gauss_maps, projected_part_map).clone()
-        
-        print("decoded", decoded_image)
-        
+                
         reconstruction = decoded_image
         return_dict = {'reconstruction': reconstruction,
                        'vis_centers': (cj_gauss_params[0], cj_gauss_params[1]),

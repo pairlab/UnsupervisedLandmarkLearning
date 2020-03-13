@@ -127,6 +127,9 @@ class _50SaladsDataset(BaseVideoDataset):
         
         img_a_color_jittered, img_a_warped, img_a_warped_offsets, target=self.construct_color_warp_pair(img_a, flip = np.random.rand() <= self.invert_probability)
 
+        if torch.isnan(img_a_color_jittered).any() or torch.isnan(img_a_warped).any():
+            print("NAN IN INPUT")
+
         return {'input_a': img_a_color_jittered, 'input_b': img_a_warped,
                 'input_temporal': img_temporal, 'target': target,
                 'imname': filename_1 + '_0.jpg',

@@ -37,11 +37,11 @@ use_gan: False
 use_identity_covariance: False
 fixed_covar: 0.008
 use_vgg: True
-use_warped: False # warping augmentating during training
-use_temporal: True
+use_warped: True # warping augmentating during training
+use_temporal: False
 use_fg_bg_mask: True # use foreground-background separation masks
 val_frac: 0.0003
 val_freq: 50
 vgg_lambda: 5.0
-randomize_pairs: True
+randomize_pairs: False
 invert_probability: 0.0

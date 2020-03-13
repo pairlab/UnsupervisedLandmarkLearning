@@ -5,6 +5,7 @@ Licensed under the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses
 Modifications made to adapt the SPADE code to this work.
 """
 
+import torch
 import torch.nn as nn
 from torch.nn import init
 import torch.nn.functional as F
@@ -109,10 +110,13 @@ class SPADEGenerator(BaseNetwork):
         # this is a modification made for this work, as the 1/16 scale tends to be too small
         x_0 = self.fc(x_0)
         x_0 = self.head_0(x_0, seg)
+
         x_1 = self.fc(x_1)
         x_1 = self.head_0(x_1, seg)
 
         x = 0.5*self.up(x_0) + 0.5*x_1
+
+
         x = self.G_middle_0(x, seg)
         x = self.G_middle_1(x, seg)
 
