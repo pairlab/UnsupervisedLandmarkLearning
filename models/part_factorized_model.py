@@ -118,6 +118,8 @@ class PartFactorizedModel(nn.Module):
         ah_prod_norm = ah_prod / (1+heatmaps_expdim.sum(1, True))
         return ah_prod_norm.sum(dim=1)  # reduce over k
 
+    # from pytorch_memlab import profile
+    # @profile
     def forward(self, color_jittered_input, warped_input=None, cj_gauss_means_x=None, cj_gauss_means_y=None, cj_gauss_covars=None):
         use_input_gaussians = False
         #  terminology: cj (color-jittered, appearance varied), w (warped, pose varied)
@@ -163,6 +165,9 @@ class PartFactorizedModel(nn.Module):
         #  output should be B x C x H x W
         projected_part_map = self.project_appearance_onto_part_map(appearance_vectors, cj_gauss_maps)
         decoded_image = self.image_decoder(cj_gauss_maps, projected_part_map).clone()
+        
+        print("decoded", decoded_image)
+        
         reconstruction = decoded_image
         return_dict = {'reconstruction': reconstruction,
                        'vis_centers': (cj_gauss_params[0], cj_gauss_params[1]),
@@ -176,6 +181,7 @@ class PartFactorizedModel(nn.Module):
             warped_fg_mask = self.sigmoid(self.fg_mask_net(w_gauss_maps))
 
             background_recon = self.bg_net((1-warped_fg_mask) * warped_input)
+
             return_dict['reconstruction'] = background_recon * (1-foreground_mask) + decoded_image * foreground_mask
             return_dict['background_recon'] = background_recon
             return_dict['decoded_foreground'] = decoded_image

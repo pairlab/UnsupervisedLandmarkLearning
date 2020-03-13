@@ -6,6 +6,7 @@ from models.losses import Vgg19PerceptualLoss, GANLoss
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 from dataloaders.bbc_pose_dataset import BBCPoseDataset
+from dataloaders._50salads_dataset import _50SaladsDataset
 from torch import optim
 from models.discriminator import MultiscaleDiscriminator
 from utils.utils import initialize_distributed, parse_all_args,\
@@ -43,6 +44,9 @@ def setup_dataloaders(config):
     if config['dataset'] == 'bbc_pose':
         train_dataset = BBCPoseDataset(config, 'train')
         val_dataset = BBCPoseDataset(config, 'validation')
+    elif config['dataset'] == '50salads':
+        train_dataset = _50SaladsDataset(config, 'train')
+        val_dataset = _50SaladsDataset(config, 'validation')
     else:
         print("No such dataset!")
         exit(-1)
@@ -180,7 +184,6 @@ def apply_GAN_criterion(output_recon, target, predicted_keypoints,
 
     return loss_G_GAN, loss_D_real, loss_D_fake
 
-
 def main(config):
     save_path = config['save_path']
     epochs = config['epochs']
@@ -227,6 +230,10 @@ def main(config):
         criterionGAN = GANLoss(use_lsgan=not config['no_lsgan'])
         criterionGAN.cuda()
         criterionFeat = nn.L1Loss().cuda()
+    if config['use_l2']:
+        criterionMSE = nn.MSELoss()
+        criterionMSE.cuda()
+        validationLoss = criterionMSE
 
     # initialize dataloader
     print("Setting up dataloaders...")
@@ -292,7 +299,7 @@ def main(config):
             output_dict = model(input_a, input_b)
             output_recon = output_dict['reconstruction']
 
-            loss_vgg = loss_G_GAN = loss_G_feat = 0
+            loss_vgg = loss_G_GAN = loss_G_feat = loss_l2 = 0
             if config['use_vgg']:
                 loss_vgg = criterionVGG(output_recon, target) * config['vgg_lambda']
             if config['use_gan']:
@@ -301,8 +308,10 @@ def main(config):
                 loss_G_GAN, loss_D_real, loss_D_fake = apply_GAN_criterion(output_recon, target, predicted_landmarks.detach(),
                                                                            discriminator, criterionGAN)
                 loss_D = (loss_D_fake + loss_D_real) * 0.5
+            if config['use_l2']:
+                loss_l2 = criterionMSE(output_recon, target) * config['l2_lambda'] 
 
-            loss_G = loss_G_GAN + loss_G_feat + loss_vgg
+            loss_G = loss_G_GAN + loss_G_feat + loss_vgg + loss_l2
             loss_G.backward()
             # grad_norm clipping
             if not config['no_grad_clip']:
@@ -335,6 +344,9 @@ def main(config):
                     print_dict['Loss_G_GAN'] = loss_G_GAN
                     print_dict['Loss_real'] = loss_D_real.data
                     print_dict['Loss_fake'] = loss_D_fake.data
+                if config['use_l2']:
+                    tb_logger.add_scalar('l2.loss', loss_l2, cnt)
+                    print_dict['Loss_L2'] = loss_l2.data
 
                 log_iter(ep, cnt % len(train_dataloader), len(train_dataloader), print_dict, log_handle=log_handle)
 
@@ -344,14 +356,15 @@ def main(config):
 
             cnt = cnt+1
             # end of train iter loop
-        if ep % config['val_freq'] == 0 and config['val_freq'] > 0:
-            val_loss = run_val(model, validationLoss, val_dataloader, os.path.join(save_path, 'val_%d_renders' % (ep)))
 
-            if distributed:
-                val_loss = reduce_tensor(val_loss, config['world_size'])
-            if rank == 0:
-                tb_logger.add_scalar('validation.loss', val_loss, ep)
-                log_iter(ep, 1, 1, {"Loss_VGG": val_loss}, header="Validation loss: ", log_handle=log_handle)
+            if cnt % config['val_freq'] == 0 and config['val_freq'] > 0:
+                val_loss = run_val(model, validationLoss, val_dataloader, os.path.join(save_path, 'val_%d_renders' % (ep)))
+
+                if distributed:
+                    val_loss = reduce_tensor(val_loss, config['world_size'])
+                if rank == 0:
+                    tb_logger.add_scalar('validation.loss', val_loss, cnt)
+                    log_iter(ep, cnt % len(train_dataloader), len(train_dataloader), {"Loss_VGG": val_loss}, header="Validation loss: ", log_handle=log_handle)
 
         if rank == 0:
             if (ep % config['save_freq'] == 0):

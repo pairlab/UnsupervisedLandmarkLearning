@@ -3,6 +3,7 @@ batch_size: 32 # per-GPU batch size
 n_landmarks: 30 # number of landmarks to learn
 dataset: ''
 dataset_path: ''
+n_training_max: 50000 # max number of training examples to use
 save_path: ''
 resume_ckpt: ''
 resume_ckpt_D: "" # discriminator checkpoint
@@ -20,6 +21,8 @@ learning_rate : 0.001
 vgg_lambda: 1.0 # weighting for vgg style loss term
 use_gan: False # GAN loss term (better reconstruction, less accurate landmarks)
 use_vgg: True # vgg style loss for reconstruction
+use_l2: False
+l2_lambda: 1.0
 no_grad_clip: False # disable gradient clipping
 reduced_w: False # use non-uniform weighting scheme for VGG layer loss
 num_D: 2 # number of discriminators to use
@@ -36,6 +39,7 @@ save_freq: 2 # checkpoint frequency during training by eoch
 val_freq: 4 # validation frequency during training by epoch
 flip_probability: 0.0 # probability for left/right flipping during training
 color_jitter_targets: False # apply color jittering on the targets first
+invert_probability: 0.0 # probability of inverting the image color jittered image during training
 trans_lb: -10 # TPS warping random translation range
 trans_ub: 10
 scale_lb: 1.05 # TPS warping random scaling range (larger means shrink more)
@@ -48,3 +52,4 @@ use_warped: False # warping augmentating during training
 use_temporal: False # temporal sampling during training
 use_fg_bg_mask: False # use foreground-background separation masks
 low_res_mask: False # use quarter resolution for separation mask (necessary for KTH or any grayscale image dataset)
+randomize_pairs: False # Randomize the pairs

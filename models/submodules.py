@@ -22,7 +22,7 @@ def conv_ReLU(in_channels, out_channels, kernel_size, stride=1, padding=0,
                              nn.ReLU(inplace=True))
 
 
-def estimate_gaussian_params(in_heatmaps, grid_x, grid_y, return_covar=False, skip_norm=False, activation=torch.exp, use_fixed_covar=False, fixed_covar=0.1):
+def estimate_gaussian_params(in_heatmaps, grid_x, grid_y, return_covar=False, skip_norm=True, activation=torch.exp, use_fixed_covar=False, fixed_covar=0.1):
     """Converts heatmaps to 2D Gaussians by estimating mean and covariance
 
     Args:

@@ -6,7 +6,7 @@ Base class for our video dataset
 from torch.utils.data import Dataset
 import numpy as np
 import torchvision.transforms as transforms
-from .transforms import TPSWarp, PairedColorJitter
+from .transforms import TPSWarp, PairedColorJitter, Invert
 
 
 class BaseVideoDataset(Dataset):
@@ -17,7 +17,10 @@ class BaseVideoDataset(Dataset):
         super(BaseVideoDataset, self).__init__()
         self.dataset_path = args['dataset_path']
         self.flip_probability = args['flip_probability']
+        self.invert_probability = args['invert_probability']
         self.img_size = args['img_size']
+        self.randomize_pairs = args['randomize_pairs']
+        self.n_training_max = args['n_training_max']
         self.inference_mode = inference_mode
 
         self.num_frames_array = self.setup_frame_array(args, partition)
@@ -33,6 +36,7 @@ class BaseVideoDataset(Dataset):
                                trans_range=[args['trans_lb'], args['trans_ub']],
                                scale_range=[args['scale_lb'], args['scale_ub']],
                                append_offset_channels=True)
+        self.invert = Invert()
 
         self.normalize = transforms.Normalize((0.5, 0.5, 0.5),
                                               (0.5, 0.5, 0.5))
@@ -82,13 +86,19 @@ class BaseVideoDataset(Dataset):
             idx_offset = -min(img_idx, np.random.randint(range_min, range_max))
         return idx_offset
 
-    def construct_color_warp_pair(self, img):
+    def construct_color_warp_pair(self, img, flip = False):
         """
         given an input image
         constructs the color jitter - warping training pairs
         returns color jittered, warped image, warping flow, and target tensors
         """
-        img_color_jittered = self.to_tensor(self.resize(self.color_jitter(img)))
+        img_color_jittered = self.color_jitter(img)
+        # randomly invert colors
+        if flip:
+            # invert image colors
+            img_color_jittered =self.invert(img_color_jittered)
+
+        img_color_jittered = self.to_tensor(self.resize(img_color_jittered))
         img = self.to_tensor(self.resize(img))
         img_warped = self.TPSWarp(img)
         img_warped_offsets = img_warped[3:]
